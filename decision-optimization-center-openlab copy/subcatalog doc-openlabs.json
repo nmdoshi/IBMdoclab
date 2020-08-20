@@ -1,0 +1,103 @@
+{
+    "title": "DOC SubCatalog - Dev",
+    "owners": {
+        "1FEtpn1": [
+            "all"
+        ],
+        "DK8IjB": [
+            "all"
+        ]
+    },
+    "viewers": {
+        "DK8IjB": [
+            "all"
+        ]
+    },
+    "editors": {},
+    "copyright": {},
+    "documents": [
+        "dte-doc-roks-lab1"
+    ],
+    "catalogInfo": {
+        "showTryFree": false,
+        "defaultService": "openshift4",
+        "bannerTextColor": "#FFFFFF",
+        "bannerBackgroundColor": "#191919",
+        "bannerImage": "_attachments/DOC-Lab-LandingPage-Banner.png",
+        "logo": "",
+        "bannerTitle": "",
+        "bannerShortDescription": "",
+        "headerbackgroundColor": "#191919",
+        "headerTextcolor": "#fff",
+        "headerTitle": "IBM Open Labs",
+        "productTitle": "Decision Optimization Center on IBM Cloud",
+        "handsOnLabSectionTitle": "Hands On Labs",
+        "handsOnLabSectionDescription": "Our interactive Labs provide a pre-configured environment and step-by-step guide to assist you in gaining familiarity with the IBM Cloud Services. Deleting the environment using the Trash will delete the environment for all (if more than one) Labs on IBM Cloud 4.3 labs.  IBM Open Labs is best experienced with Firefox and Chrome browsers. <p><p> <b>Note:</b> These labs can accomodate 30 concurrent users. If you are planning a workshop with a large number of users, open an issue via the Help menu. Please provide contact information, desired date of workshop (minimum of 1 week notice required), and number of attendees.",
+        "videoSectionTitle": "Videos",
+        "videoSectionDescription": "Watch technical experts walk you through common use cases, highlighting product features and key capabilities.",
+        "videos": [
+            {
+                "title": "Introduction to IBM Open Labs",
+                "id": "mURT4mDGCkk"
+            },
+            {
+                "title": "Introduction to Decision Optimization Center",
+                "id": "b8V0HrxMZDM"
+            },
+            {
+                "title": "Features of IBM Decision Optimization Center",
+                "id": "Fc6cPakX5Wg"
+            },
+            {
+                "title": "Design an application using IBM DecisionOptimization Center",
+                "id": "8DOBBdNgCAc"
+            }
+        ],
+        "supportTitle": "Help",
+        "support": {
+            "faq": {
+                "title": "Frequently Asked Questions",
+                "menuTitle": "FAQ",
+                "relativePath": "__private/dte-faq.html"
+            },
+            "issue": {
+                "title": "Issues",
+                "menuTitle": "Report Issue",
+                "component": "IssueComponent",
+                "case": {
+                    "dataProdFamId": "6086",
+                    "dataServiceId": "20355"
+                }
+            }
+        },
+        "features": {
+            "markLabCompleted": true,
+            "forceNewTab": true
+        },
+        "maintenance": {
+            "title": "We'll be Right back ....",
+            "message": "Resolving a maintenance issue, Please try again later.",
+            "launch": false,
+            "enabled": false,
+            "image": ""
+        },
+        "preActions": {
+            "provision": {
+                "modalHtml": "__private/provision-predata.html",
+                "regex": "*ibm.com"
+            }
+        }
+    },
+    "documentsInfo": {
+        "dte-doc-roks-lab1": {
+            "backgroundColor": "#012749",
+            "textColor": "#fff",
+            "descColor":"#ffffff",
+            "title": "Lab1: Introduction to Decision Optimization Center on Red Hat OpenShift 4.3",
+            "labIcon": "_attachments/RedHatOpenShiftTransparentForBlack.png",
+            "labShortDescription": "Step-by-step guide to deploy and Operate Decision Optimization Center on IBM Cloud.",
+            "progressStars": 5,
+            "duration": "60 Mins"
+        }
+    }
+}
