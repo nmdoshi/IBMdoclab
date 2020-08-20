@@ -8,6 +8,6 @@ entries:
     digest: 715156068f380df570528f52960f7df8fef6559aea440a6c076fa6660ba9828e
     name: db-gene-demo-capacity-planning
     urls:
-    - https://github.com/IBM/decision-optimization-center-openlab/releases/download/db-gene-demo-capacity-planning-1.0.5/db-gene-demo-capacity-planning-1.0.5.tgz
+    - https://ibm.github.io/decision-optimization-center-openlab/releases/download/db-gene-demo-capacity-planning-1.0.5/db-gene-demo-capacity-planning-1.0.5.tgz
     version: 1.0.5
 generated: "2020-07-17T11:47:15.260713-04:00"
