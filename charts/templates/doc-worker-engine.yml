@@ -1,0 +1,138 @@
+{{- if eq .Values.global.target "openshift" }}
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  labels:
+    app: workers
+  name: capacity-planning-engine-worker
+spec:
+  lookupPolicy:
+    local: false
+  tags:
+    - annotations: null
+      from:
+        kind: DockerImage
+        name: {{ .Values.global.imageRegistry }}/engine-worker:{{ .Values.global.version }}
+      importPolicy:
+        insecure: true
+        scheduled: true
+      name: {{ .Values.global.version }}
+      referencePolicy:
+        type: Source
+---
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  labels:
+    app: workers
+  name: capacity-planning-engine-worker
+spec:
+  replicas: 1
+  selector:
+    app: workers
+    deploymentconfig: capacity-planning-engine-worker
+  strategy:
+    activeDeadlineSeconds: 21600
+    resources: {}
+    rollingParams:
+      intervalSeconds: 1
+      maxSurge: 25%
+      maxUnavailable: 25%
+      timeoutSeconds: 600
+      updatePeriodSeconds: 1
+    type: Rolling
+  template:
+    metadata:
+      labels:
+        app: workers
+        deploymentconfig: capacity-planning-engine-worker
+    spec:
+      containers:
+        - env:
+            - name: JAVA_TOOL_OPTIONS
+              value: -Xmx4000m -Xms500m -XX:+CrashOnOutOfMemoryError -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/carhartt-mso-checker-worker-heap-dump.hprof
+            - name: SPRING_RABBITMQ_HOST
+              value: rabbitmq
+            - name: SPRING_RABBITMQ_USERNAME
+              value: guest
+            - name: SPRING_RABBITMQ_PASSWORD
+              value: guest
+          image: "{{ .Values.global.imageRegistry }}/engine-worker:{{ .Values.global.version }}"
+          imagePullPolicy: Always
+          name: capacity-planning-engine-worker
+          resources:
+            limits:
+              memory: 4256Mi
+            requests:
+              cpu: 100m
+              memory: 1000Mi
+      dnsPolicy: ClusterFirst
+      {{- if .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range .Values.global.imagePullSecrets }}
+        - name: {{ .name }}
+        {{- end }}
+      {{- end }}
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+  test: false
+  triggers:
+    - type: ConfigChange
+    - imageChangeParams:
+        automatic: true
+        containerNames:
+          - capacity-planning-engine-worker
+        from:
+          kind: ImageStreamTag
+          name: capacity-planning-engine-worker:{{ .Values.global.version }}
+      type: ImageChange
+{{- end }}
+{{- if eq .Values.global.target "kubernetes" }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: workers
+  name: capacity-planning-engine-worker
+spec:
+  selector:
+    matchLabels:
+      app: workers
+      deploymentconfig: capacity-planning-engine-worker
+  template:
+    metadata:
+      labels:
+        app: workers
+        deploymentconfig: capacity-planning-engine-worker
+    spec:
+      containers:
+        - env:
+            - name: SPRING_RABBITMQ_HOST
+              value: rabbitmq
+            - name: SPRING_RABBITMQ_USERNAME
+              value: guest
+            - name: SPRING_RABBITMQ_PASSWORD
+              value: guest
+            - name: JAVA_TOOL_OPTIONS
+              value: -Xmx4000m -Xms500m  -XX:+CrashOnOutOfMemoryError -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/carhartt-mso-checker-worker-heap-dump.hprof
+          image: "{{ .Values.global.imageRegistry }}/engine-worker:{{ .Values.global.version }}"
+          imagePullPolicy: Always
+          name: capacity-planning-engine-worker
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      {{- if .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range .Values.global.imagePullSecrets }}
+        - name: {{ .name }}
+        {{- end }}
+      {{- end }}
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+{{- end }}

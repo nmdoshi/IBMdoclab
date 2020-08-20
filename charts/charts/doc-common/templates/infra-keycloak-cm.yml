@@ -1,0 +1,10 @@
+{{- if .Values.infra.keycloak.enabled }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: keycloak-provisioning-data
+data:
+  realm.json: |
+{{ tpl .Values.infra.keycloak.realm . | indent 4 }}
+{{- end }}

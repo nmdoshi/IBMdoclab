@@ -1,0 +1,279 @@
+{{- if eq .Values.global.target "openshift" }}
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  labels:
+    app: dbos
+  name: dbos-master
+spec:
+  lookupPolicy:
+    local: false
+  tags:
+    - annotations: null
+      from:
+        kind: DockerImage
+        name: "{{ .Values.dbos.imageRegistry }}/dbos-master:{{ .Values.dbos.version }}"
+      importPolicy:
+        insecure: true
+        scheduled: true
+      name: {{ .Values.dbos.version }}
+      referencePolicy:
+        type: Source
+---
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  labels:
+    app: dbos
+  name: dbos-master
+spec:
+  replicas: 1
+  selector:
+    app: dbos
+    deploymentconfig: dbos-master
+  strategy:
+    activeDeadlineSeconds: 21600
+    resources: {}
+    rollingParams:
+      intervalSeconds: 1
+      maxSurge: 25%
+      maxUnavailable: 25%
+      timeoutSeconds: 600
+      updatePeriodSeconds: 1
+    type: Rolling
+  template:
+    metadata:
+      labels:
+        app: dbos
+        deploymentconfig: dbos-master
+    spec:
+      containers:
+        - env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: {{ .Values.dbos.authProfile }}
+            - name: JAVA_OPTS
+              value: -Xmx500m -Xms10m
+            - name: SPRING_RABBITMQ_HOST
+              value: rabbitmq
+            - name: SPRING_RABBITMQ_USERNAME
+              value: guest
+            - name: SPRING_RABBITMQ_PASSWORD
+              value: guest
+            - name: SPRING_DATA_MONGODB_HOST
+              value: mongo
+            - name: SPRING_DATA_MONGODB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  key: mongodb-dbos-user
+                  name: mongo
+            - name: SPRING_DATA_MONGODB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: mongodb-dbos-password
+                  name: mongo
+#                - name: SPRING_DATA_MONGODB_DATABASE
+#                  valueFrom:
+#                    secretKeyRef:
+#                      key: mongodb-dbos-database
+#                      name: mongo
+            - name: SPRING_DATA_MONGODB_ADMIN_USER
+              valueFrom:
+                secretKeyRef:
+                  key: mongo-initdb-root-username
+                  name: mongo
+            - name: SPRING_DATA_MONGODB_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: mongo-initdb-root-password
+                  name: mongo
+          image: "{{ .Values.dbos.imageRegistry }}/dbos-master:{{ .Values.dbos.version }}"
+          imagePullPolicy: Always
+          name: dbos-master
+          resources:
+            limits:
+              memory: {{ .Values.dbos.master.memLimit }}
+            requests:
+              cpu: {{ .Values.dbos.master.cpuRequest }}
+              memory: {{ .Values.dbos.master.memRequest }}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      {{- if .Values.dbos.imagePullSecrets }}
+      imagePullSecrets:
+        {{ toYaml .Values.dbos.imagePullSecrets | indent 12 }}
+      {{- end }}
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+  test: false
+  triggers:
+    - imageChangeParams:
+        automatic: true
+        containerNames:
+          - dbos-master
+        from:
+          kind: ImageStreamTag
+          name: dbos-master:{{ .Values.dbos.version }}
+      type: ImageChange
+    - type: ConfigChange
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  labels:
+    app: dbos
+  name: dbos-master
+spec:
+  host: dbos-master-{{ .Release.Namespace }}.{{ .Values.global.host }}
+  port:
+    targetPort: 8080-tcp
+  tls:
+    insecureEdgeTerminationPolicy: Redirect
+    termination: edge
+  to:
+    kind: Service
+    name: dbos-master
+    weight: 100
+  wildcardPolicy: None
+# should be removed when okd API bug fixed (https://github.com/openshift/origin/issues/24060)
+status:
+  ingress:
+    - conditions:
+        - lastTransitionTime: "2019-12-06T03:24:58Z"
+          status: "True"
+          type: Admitted
+      host: ""
+      routerCanonicalHostname: ""
+      routerName: default
+      wildcardPolicy: None
+  {{- end }}
+  {{- if eq .Values.global.target "kubernetes" }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: dbos
+  name: dbos-master
+spec:
+  selector:
+    matchLabels:
+      app: dbos
+      deploymentconfig: dbos-master
+  template:
+    metadata:
+      labels:
+        app: dbos
+        deploymentconfig: dbos-master
+    spec:
+      containers:
+        - env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: {{ .Values.dbos.authProfile }}
+            - name: JAVA_OPTS
+              value: -Xmx500m -Xms10m
+            - name: SPRING_RABBITMQ_HOST
+              value: rabbitmq
+            - name: SPRING_RABBITMQ_USERNAME
+              value: guest
+            - name: SPRING_RABBITMQ_PASSWORD
+              value: guest
+            - name: SPRING_DATA_MONGODB_HOST
+              value: mongo
+            - name: SPRING_DATA_MONGODB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  key: mongodb-dbos-user
+                  name: mongo
+            - name: SPRING_DATA_MONGODB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: mongodb-dbos-password
+                  name: mongo
+            #                - name: SPRING_DATA_MONGODB_DATABASE
+            #                  valueFrom:
+            #                    secretKeyRef:
+            #                      key: mongodb-dbos-database
+            #                      name: mongo
+            - name: SPRING_DATA_MONGODB_ADMIN_USER
+              valueFrom:
+                secretKeyRef:
+                  key: mongo-initdb-root-username
+                  name: mongo
+            - name: SPRING_DATA_MONGODB_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: mongo-initdb-root-password
+                  name: mongo
+          image: "{{ .Values.dbos.imageRegistry }}/dbos-master:{{ .Values.dbos.version }}"
+          imagePullPolicy: Always
+          name: dbos-master
+          resources:
+            limits:
+              memory: {{ .Values.dbos.master.memLimit }}
+            requests:
+              cpu: {{ .Values.dbos.master.cpuRequest }}
+              memory: {{ .Values.dbos.master.memRequest }}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      {{- if .Values.dbos.imagePullSecrets }}
+      imagePullSecrets:
+        {{ toYaml .Values.dbos.imagePullSecrets | indent 12 }}
+      {{- end }}
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: dbos-master-web
+spec:
+  entryPoints:
+    - web
+  routes:
+    - kind: Rule
+      match: Host(`dbos-master-{{ .Release.Namespace }}.{{ .Values.global.host }}`) && PathPrefix(`/`)
+      middlewares:
+        - name: redirect
+          namespace: kube-system
+      services:
+        - name: dbos-master
+          port: 8080
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: dbos-master-websecure
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - kind: Rule
+      match: Host(`dbos-master-{{ .Release.Namespace }}.{{ .Values.global.host }}`) && PathPrefix(`/`)
+      services:
+        - name: dbos-master
+          port: 8080
+  tls: {}
+{{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: dbos
+  name: dbos-master
+spec:
+  ports:
+    - name: 8080-tcp
+      port: 8080
+      protocol: TCP
+      targetPort: 8080
+  selector:
+      app: dbos
+      deploymentconfig: dbos-master
+  sessionAffinity: None
+  type: ClusterIP

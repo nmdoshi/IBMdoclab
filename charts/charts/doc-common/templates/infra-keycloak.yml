@@ -1,0 +1,278 @@
+{{- if .Values.infra.keycloak.enabled }}
+{{- if eq .Values.global.target "openshift" }}
+#apiVersion: image.openshift.io/v1
+#kind: ImageStream
+#metadata:
+#  labels:
+#    app: infra
+#  name: keycloak
+#spec:
+#  lookupPolicy:
+#    local: false
+#  tags:
+#    - annotations: null
+#      from:
+#        kind: DockerImage
+#        name: "{{ .Values.infra.imageRegistry }}/keycloak/keycloak-theme:{{ .Values.infra.keycloak.version }}"
+#      importPolicy:
+#        insecure: true
+#        scheduled: true
+#      name: {{ .Values.infra.keycloak.version }}
+#      referencePolicy:
+#        type: Source
+#---
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  labels:
+    app: infra
+    deploymentconfig: keycloak
+  name: keycloak
+spec:
+  replicas: 1
+  selector:
+    app: infra
+    deploymentconfig: keycloak
+  strategy:
+    activeDeadlineSeconds: 21600
+    resources: {}
+    rollingParams:
+      intervalSeconds: 1
+      maxSurge: 25%
+      maxUnavailable: 25%
+      timeoutSeconds: 600
+      updatePeriodSeconds: 1
+    type: Rolling
+  template:
+    metadata:
+      labels:
+        app: infra
+        deploymentconfig: keycloak
+    spec:
+      containers:
+        - env:
+            - name: PROXY_ADDRESS_FORWARDING
+              value: 'true'
+            - name: DB_VENDOR
+              value: postgres
+            - name: DB_ADDR
+              value: postgres
+            - name: DB_DATABASE
+              value: keycloak
+            - name: DB_USER
+              value: keycloak
+            - name: DB_PASSWORD
+              value: keycloak
+            - name: KEYCLOAK_USER
+              value: admin
+            - name: KEYCLOAK_PASSWORD
+              value: gene
+            - name: KEYCLOAK_IMPORT
+              value: /tmp/realm.json
+          image: "{{ .Values.infra.imageRegistry }}/keycloak-theme:{{ .Values.infra.keycloak.version }}"
+          imagePullPolicy: Always
+          name: keycloak
+          resources:
+            limits:
+              memory: {{ .Values.infra.keycloak.memLimit }}
+            requests:
+              cpu: {{ .Values.infra.keycloak.cpuRequest }}
+              memory: {{ .Values.infra.keycloak.memRequest }}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+            - mountPath: /tmp/realm.json
+              name: provisioning-data
+              subPath: realm.json
+      dnsPolicy: ClusterFirst
+      {{- if .Values.infra.imagePullSecrets }}
+      imagePullSecrets:
+        {{ toYaml .Values.infra.imagePullSecrets | indent 12 }}
+      {{- end }}
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - configMap:
+            defaultMode: 493
+            name: keycloak-provisioning-data
+          name: provisioning-data
+  test: false
+  triggers:
+#    - imageChangeParams:
+#        automatic: true
+#        containerNames:
+#          - keycloak
+#        from:
+#          kind: ImageStreamTag
+#          name: keycloak:{{ .Values.infra.keycloak.version }}
+#      type: ImageChange
+    - type: ConfigChange
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  labels:
+    app: infra
+  name: keycloak
+spec:
+  host: keycloak-{{ .Release.Namespace }}.{{ .Values.global.host }}
+  port:
+    targetPort: 8080-tcp
+  tls:
+    insecureEdgeTerminationPolicy: Redirect
+    termination: edge
+    {{- if .Values.infra.keycloak.route }}
+    {{- if .Values.infra.keycloak.route.caCertificate }}
+    caCertificate:
+      {{- .Values.infra.keycloak.route.caCertificate | indent 10 }}
+    {{- end }}
+    {{- if .Values.infra.keycloak.route.certificate }}
+    certificate:
+      {{- .Values.infra.keycloak.route.certificate | indent 10 }}
+    {{- end }}
+    {{- if .Values.infra.keycloak.route.key }}
+    key:
+      {{- .Values.infra.keycloak.route.key | indent 10 }}
+    {{- end }}
+    {{- end }}
+  to:
+    kind: Service
+    name: keycloak
+    weight: 100
+  wildcardPolicy: None
+
+
+# should be removed when okd API bug fixed (https://github.com/openshift/origin/issues/24060)
+status:
+  ingress:
+    - conditions:
+        - lastTransitionTime: "2019-12-06T03:24:58Z"
+          status: "True"
+          type: Admitted
+      host: ""
+      routerCanonicalHostname: ""
+      routerName: default
+      wildcardPolicy: None
+{{- end }}
+{{- if eq .Values.global.target "kubernetes" }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: infra
+  name: keycloak
+spec:
+  selector:
+    matchLabels:
+      app: infra
+      deploymentconfig: keycloak
+  template:
+    metadata:
+      labels:
+        app: infra
+        deploymentconfig: keycloak
+    spec:
+      containers:
+        - env:
+            - name: PROXY_ADDRESS_FORWARDING
+              value: 'true'
+            - name: DB_VENDOR
+              value: postgres
+            - name: DB_ADDR
+              value: postgres
+            - name: DB_DATABASE
+              value: keycloak
+            - name: DB_USER
+              value: keycloak
+            - name: DB_PASSWORD
+              value: keycloak
+            - name: KEYCLOAK_USER
+              value: admin
+            - name: KEYCLOAK_PASSWORD
+              value: gene
+            - name: KEYCLOAK_IMPORT
+              value: /tmp/realm.json
+          image: "{{ .Values.infra.imageRegistry }}/keycloak/keycloak-theme:{{ .Values.infra.keycloak.version }}"
+          imagePullPolicy: Always
+          name: keycloak
+          resources:
+            limits:
+              memory: {{ .Values.infra.keycloak.memLimit }}
+            requests:
+              cpu: {{ .Values.infra.keycloak.cpuRequest }}
+              memory: {{ .Values.infra.keycloak.memRequest }}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+            - mountPath: /tmp/realm.json
+              name: provisioning-data
+              subPath: realm.json
+      dnsPolicy: ClusterFirst
+      {{- if .Values.infra.imagePullSecrets }}
+      imagePullSecrets:
+        {{ toYaml .Values.infra.imagePullSecrets | indent 12 }}
+      {{- end }}
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - configMap:
+            defaultMode: 493
+            name: keycloak-provisioning-data
+          name: provisioning-data
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: keycloak-web
+spec:
+  entryPoints:
+    - web
+  routes:
+    - kind: Rule
+      match: Host(`keycloak-{{ .Release.Namespace }}.{{ .Values.global.host }}`) && PathPrefix(`/`)
+      middlewares:
+        - name: redirect
+          namespace: kube-system
+      services:
+        - name: keycloak
+          port: 8080
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: keycloak-websecure
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - kind: Rule
+      match: Host(`keycloak-{{ .Release.Namespace }}.{{ .Values.global.host }}`) && PathPrefix(`/`)
+      services:
+        - name: keycloak
+          port: 8080
+  tls: {}
+{{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: infra
+  name: keycloak
+spec:
+  ports:
+    - name: 8080-tcp
+      port: 8080
+      protocol: TCP
+      targetPort: 8080
+  selector:
+    app: infra
+    deploymentconfig: keycloak
+  sessionAffinity: None
+  type: ClusterIP
+{{- end }}

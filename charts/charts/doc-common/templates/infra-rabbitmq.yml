@@ -1,0 +1,169 @@
+{{- if eq .Values.global.target "openshift" }}
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  labels:
+    app: infra
+  name: rabbitmq
+spec:
+  replicas: 1
+  selector:
+    app: infra
+    deploymentconfig: rabbitmq
+  strategy:
+    activeDeadlineSeconds: 21600
+    resources: {}
+    rollingParams:
+      intervalSeconds: 1
+      maxSurge: 25%
+      maxUnavailable: 25%
+      timeoutSeconds: 600
+      updatePeriodSeconds: 1
+    type: Rolling
+  template:
+    metadata:
+      labels:
+        app: infra
+        deploymentconfig: rabbitmq
+    spec:
+      containers:
+        - image: "{{ .Values.infra.imageRegistry }}/rabbitmq-stomp:3.7.8"
+          imagePullPolicy: Always
+          name: rabbitmq
+          ports:
+            - containerPort: 5672
+              protocol: TCP
+            - containerPort: 15672
+              protocol: TCP
+            - containerPort: 61613
+              protocol: TCP
+          resources:
+            limits:
+              memory: {{ .Values.infra.rabbitmq.memLimit }}
+            requests:
+              cpu: {{ .Values.infra.rabbitmq.cpuRequest }}
+              memory: {{ .Values.infra.rabbitmq.memRequest }}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+            - mountPath: /var/lib/rabbitmq
+              name: rabbitmq-volume
+            - mountPath: /var/log/rabbitmq
+              name: rabbitmq-logs-volume
+      dnsPolicy: ClusterFirst
+      {{- if .Values.infra.imagePullSecrets }}
+      imagePullSecrets:
+        {{ toYaml .Values.infra.imagePullSecrets | indent 12 }}
+      {{- end }}
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - emptyDir: {}
+          name: rabbitmq-volume
+        - emptyDir: {}
+          name: rabbitmq-logs-volume
+  test: false
+  triggers:
+    - type: ConfigChange
+{{- end }}
+{{- if eq .Values.global.target "kubernetes" }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: infra
+  name: rabbitmq
+spec:
+  selector:
+    matchLabels:
+      app: infra
+      deploymentconfig: rabbitmq
+  template:
+    metadata:
+      labels:
+        app: infra
+        deploymentconfig: rabbitmq
+    spec:
+      containers:
+        - image: "{{ .Values.infra.imageRegistry }}/rabbitmq-stomp:3.7.8"
+          imagePullPolicy: Always
+          name: rabbitmq
+          ports:
+            - containerPort: 5672
+              protocol: TCP
+            - containerPort: 15672
+              protocol: TCP
+            - containerPort: 61613
+              protocol: TCP
+          resources:
+            limits:
+              memory: {{ .Values.infra.rabbitmq.memLimit }}
+            requests:
+              cpu: {{ .Values.infra.rabbitmq.cpuRequest }}
+              memory: {{ .Values.infra.rabbitmq.memRequest }}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+            - mountPath: /var/lib/rabbitmq
+              name: rabbitmq-volume
+            - mountPath: /var/log/rabbitmq
+              name: rabbitmq-logs-volume
+      dnsPolicy: ClusterFirst
+      {{- if .Values.infra.imagePullSecrets }}
+      imagePullSecrets:
+        {{ toYaml .Values.infra.imagePullSecrets | indent 12 }}
+      {{- end }}
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - emptyDir: {}
+          name: rabbitmq-volume
+        - emptyDir: {}
+          name: rabbitmq-logs-volume
+{{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: infra
+  name: rabbitmq
+spec:
+  ports:
+    - name: 4369-tcp
+      port: 4369
+      protocol: TCP
+      targetPort: 4369
+    - name: 5671-tcp
+      port: 5671
+      protocol: TCP
+      targetPort: 5671
+    - name: 5672-tcp
+      port: 5672
+      protocol: TCP
+      targetPort: 5672
+    - name: 15671-tcp
+      port: 15671
+      protocol: TCP
+      targetPort: 15671
+    - name: 15672-tcp
+      port: 15672
+      protocol: TCP
+      targetPort: 15672
+    - name: 25672-tcp
+      port: 25672
+      protocol: TCP
+      targetPort: 25672
+    - name: 61613-tcp
+      port: 61613
+      protocol: TCP
+      targetPort: 61613
+  selector:
+    deploymentconfig: rabbitmq
+  sessionAffinity: None
+  type: ClusterIP

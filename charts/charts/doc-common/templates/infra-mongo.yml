@@ -1,0 +1,356 @@
+{{- if eq .Values.global.target "openshift" }}
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  labels:
+    app: infra
+  name: mongo
+spec:
+  lookupPolicy:
+    local: false
+  tags:
+    - annotations: null
+      from:
+        kind: DockerImage
+        name: "mongo:4.2.1"
+      importPolicy:
+        insecure: true
+        scheduled: true
+      name: 4.2.1
+      referencePolicy:
+        type: Source
+
+---
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  labels:
+    app: infra
+  name: mongo
+spec:
+  replicas: 1
+  selector:
+    app: infra
+    name: mongo
+  strategy:
+    activeDeadlineSeconds: 21600
+    recreateParams:
+      timeoutSeconds: 600
+    resources: {}
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: infra
+        name: mongo
+    spec:
+      containers:
+        - env:
+          - name: MONGO_INITDB_ROOT_USERNAME
+            valueFrom:
+              secretKeyRef:
+                key: mongo-initdb-root-username
+                name: mongo
+          - name: MONGO_INITDB_ROOT_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: mongo
+                key: mongo-initdb-root-password
+          - name: MONGODB_DBOS_USER
+            valueFrom:
+              secretKeyRef:
+                name: mongo
+                key: mongodb-dbos-user
+          - name: MONGODB_DBOS_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: mongo
+                key: mongodb-dbos-password
+          - name: MONGODB_DBOS_DATABASE
+            valueFrom:
+              secretKeyRef:
+                name: mongo
+                key: mongodb-dbos-database
+          - name: MONGODB_SCENARIO_USER
+            valueFrom:
+              secretKeyRef:
+                name: mongo
+                key: mongodb-scenario-user
+          - name: MONGODB_SCENARIO_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: mongo
+                key: mongodb-scenario-password
+          - name: MONGODB_SCENARIO_DATABASE
+            valueFrom:
+              secretKeyRef:
+                name: mongo
+                key: mongodb-scenario-database
+          - name: MONGODB_EXECUTION_USER
+            valueFrom:
+              secretKeyRef:
+                name: mongo
+                key: mongodb-execution-user
+          - name: MONGODB_EXECUTION_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: mongo
+                key: mongodb-execution-password
+          - name: MONGODB_EXECUTION_DATABASE
+            valueFrom:
+              secretKeyRef:
+                name: mongo
+                key: mongodb-execution-database
+          - name: MONGODB_PERMISSION_USER
+            valueFrom:
+              secretKeyRef:
+                name: mongo
+                key: mongodb-permission-user
+          - name: MONGODB_PERMISSION_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: mongo
+                key: mongodb-permission-password
+          - name: MONGODB_PERMISSION_DATABASE
+            valueFrom:
+              secretKeyRef:
+                name: mongo
+                key: mongodb-permission-database
+          image: "mongo:4.2.1"
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            successThreshold: 1
+            tcpSocket:
+              port: 27017
+            timeoutSeconds: 1
+          name: mongo
+          ports:
+            - containerPort: 27017
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            periodSeconds: 10
+            successThreshold: 1
+            tcpSocket:
+              port: 27017
+            timeoutSeconds: 1
+          resources:
+            limits:
+              memory: {{ .Values.infra.mongo.memLimit }}
+            requests:
+              cpu: {{ .Values.infra.mongo.cpuRequest }}
+              memory: {{ .Values.infra.mongo.memRequest }}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+            - mountPath: /data/db
+              name: mongo-data
+            - mountPath: /docker-entrypoint-initdb.d/addUser.sh
+              name: mongo-provisioning-data
+              subPath: addUser.sh
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - name: mongo-data
+          {{- if .Values.infra.mongo.volume.enabled }}
+          persistentVolumeClaim:
+            claimName: mongo
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        - configMap:
+            defaultMode: 493
+            name: mongo-provisioning-data
+          name: mongo-provisioning-data
+  test: false
+  triggers:
+    - imageChangeParams:
+        automatic: true
+        containerNames:
+          - mongo
+        from:
+          kind: ImageStreamTag
+          name: mongo:4.2.1
+      type: ImageChange
+    - type: ConfigChange
+{{- end }}
+{{- if eq .Values.global.target "kubernetes" }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: infra
+  name: mongo
+spec:
+  selector:
+    matchLabels:
+      app: infra
+      name: mongo
+  template:
+    metadata:
+      labels:
+        app: infra
+        name: mongo
+    spec:
+      containers:
+        - env:
+          - name: MONGO_INITDB_ROOT_USERNAME
+            valueFrom:
+              secretKeyRef:
+                name: mongo
+                key: mongo-initdb-root-username
+          - name: MONGO_INITDB_ROOT_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: mongo
+                key: mongo-initdb-root-password
+          - name: MONGODB_DBOS_USER
+            valueFrom:
+              secretKeyRef:
+                name: mongo
+                key: mongodb-dbos-user
+          - name: MONGODB_DBOS_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: mongo
+                key: mongodb-dbos-password
+          - name: MONGODB_DBOS_DATABASE
+            valueFrom:
+              secretKeyRef:
+                name: mongo
+                key: mongodb-dbos-database
+          - name: MONGODB_SCENARIO_USER
+            valueFrom:
+              secretKeyRef:
+                name: mongo
+                key: mongodb-scenario-user
+          - name: MONGODB_SCENARIO_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: mongo
+                key: mongodb-scenario-password
+          - name: MONGODB_SCENARIO_DATABASE
+            valueFrom:
+              secretKeyRef:
+                name: mongo
+                key: mongodb-scenario-database
+          - name: MONGODB_EXECUTION_USER
+            valueFrom:
+              secretKeyRef:
+                name: mongo
+                key: mongodb-execution-user
+          - name: MONGODB_EXECUTION_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: mongo
+                key: mongodb-execution-password
+          - name: MONGODB_EXECUTION_DATABASE
+            valueFrom:
+              secretKeyRef:
+                name: mongo
+                key: mongodb-execution-database
+          - name: MONGODB_PERMISSION_USER
+            valueFrom:
+              secretKeyRef:
+                name: mongo
+                key: mongodb-permission-user
+          - name: MONGODB_PERMISSION_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: mongo
+                key: mongodb-permission-password
+          - name: MONGODB_PERMISSION_DATABASE
+            valueFrom:
+              secretKeyRef:
+                name: mongo
+                key: mongodb-permission-database
+          image: "mongo:4.2.1"
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            successThreshold: 1
+            tcpSocket:
+              port: 27017
+            timeoutSeconds: 1
+          name: mongo
+          ports:
+            - containerPort: 27017
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            periodSeconds: 10
+            successThreshold: 1
+            tcpSocket:
+              port: 27017
+            timeoutSeconds: 1
+          resources:
+            limits:
+              memory: {{ .Values.infra.mongo.memLimit }}
+            requests:
+              cpu: {{ .Values.infra.mongo.cpuRequest }}
+              memory: {{ .Values.infra.mongo.memRequest }}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+            - mountPath: /data/db
+              name: mongo-data
+            - mountPath: /docker-entrypoint-initdb.d/addUser.sh
+              name: mongo-provisioning-data
+              subPath: addUser.sh
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - name: mongo-data
+          {{- if .Values.infra.mongo.volume.enabled }}
+          persistentVolumeClaim:
+            claimName: mongo
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        - configMap:
+            defaultMode: 493
+            name: mongo-provisioning-data
+          name: mongo-provisioning-data
+{{- end }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mongo-provisioning-data
+data:
+  addUser.sh: |
+    #!/bin/bash
+    set -e
+    mongo -u $MONGO_INITDB_ROOT_USERNAME -p $MONGO_INITDB_ROOT_PASSWORD --eval "db.getSiblingDB('$MONGODB_DBOS_DATABASE').createUser({user: '$MONGODB_DBOS_USER', pwd: '$MONGODB_DBOS_PASSWORD', roles: [{ role: 'dbOwner', db: '$MONGODB_DBOS_DATABASE' }]},{w: 'majority',wtimeout: 5000});"
+    mongo -u $MONGO_INITDB_ROOT_USERNAME -p $MONGO_INITDB_ROOT_PASSWORD --eval "db.getSiblingDB('$MONGODB_SCENARIO_DATABASE').createUser({user: '$MONGODB_SCENARIO_USER', pwd: '$MONGODB_SCENARIO_PASSWORD', roles: [{ role: 'dbOwner', db: '$MONGODB_SCENARIO_DATABASE' }]},{w: 'majority',wtimeout: 5000});"
+    mongo -u $MONGO_INITDB_ROOT_USERNAME -p $MONGO_INITDB_ROOT_PASSWORD --eval "db.getSiblingDB('$MONGODB_EXECUTION_DATABASE').createUser({user: '$MONGODB_EXECUTION_USER', pwd: '$MONGODB_EXECUTION_PASSWORD', roles: [{ role: 'dbOwner', db: '$MONGODB_EXECUTION_DATABASE' }]},{w: 'majority',wtimeout: 5000});"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: infra
+  name: mongo
+spec:
+  ports:
+    - name: mongo
+      port: 27017
+      protocol: TCP
+      targetPort: 27017
+  selector:
+    app: infra
+    name: mongo
+  sessionAffinity: None
+  type: ClusterIP

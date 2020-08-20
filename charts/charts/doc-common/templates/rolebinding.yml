@@ -1,0 +1,49 @@
+{{- if eq .Values.global.target "openshift" }}
+apiVersion: v1
+kind: List
+metadata: {}
+items:
+  {{- range .Values.global.users }}
+  - apiVersion: authorization.openshift.io/v1
+    groupNames: []
+    kind: RoleBinding
+    metadata:
+      name: admin-{{ .name }}
+    roleRef:
+      name: admin
+    subjects:
+      - kind: User
+        name: {{ .name }}
+    userNames:
+      - {{ .name }}
+  {{- end }}
+{{- end }}
+
+#  {{- if eq .Values.global.target "kubernetes" }}
+#---
+#apiVersion: rbac.authorization.k8s.io/v1
+#    kind: Role
+#    metadata:
+#      name: admin-role
+#    rules:
+#      - apiGroups:
+#          - '*'
+#    resources:
+#      - '*'
+#    verbs:
+#      - '*'
+#  {{- range .Values.users }}
+#---
+#apiVersion: rbac.authorization.k8s.io/v1
+#    kind: RoleBinding
+#    metadata:
+#      name: admin-{{ .name }}
+#    roleRef:
+#      apiGroup: rbac.authorization.k8s.io
+#      kind: Role
+#      name: admin-role
+#    subjects:
+#      - kind: User
+#        name: {{ .name }}
+#  {{- end }}
+#  {{- end }}
