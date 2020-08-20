@@ -1,0 +1,13 @@
+{{- if .Values.infra.postgres.volume.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.infra.postgres.volume.storageSize }}
+  storageClassName: {{ .Values.infra.postgres.volume.storageClassName }}
+{{- end }}

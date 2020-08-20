@@ -1,0 +1,13 @@
+{{- if .Values.infra.mongo.volume.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mongo
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.infra.mongo.volume.storageSize }}
+  storageClassName: {{ .Values.infra.mongo.volume.storageClassName }}
+{{- end }}

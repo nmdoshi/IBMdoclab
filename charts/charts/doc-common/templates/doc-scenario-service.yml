@@ -1,0 +1,233 @@
+{{- if eq .Values.global.target "openshift" }}
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  labels:
+    app: dbgene
+  name: scenario-service
+spec:
+  lookupPolicy:
+    local: false
+  tags:
+    - annotations: null
+      from:
+        kind: DockerImage
+        name: "{{ .Values.global.imageRegistry }}/scenario-service:{{ .Values.global.version }}"
+      importPolicy:
+        insecure: true
+        scheduled: true
+      name: {{ .Values.global.version }}
+      referencePolicy:
+        type: Source
+---
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  labels:
+    app: dbgene
+  name: scenario-service
+spec:
+  replicas: 1
+  selector:
+    app: dbgene
+    deploymentconfig: scenario-service
+  strategy:
+    activeDeadlineSeconds: 21600
+    resources: {}
+    rollingParams:
+      intervalSeconds: 1
+      maxSurge: 25%
+      maxUnavailable: 25%
+      timeoutSeconds: 600
+      updatePeriodSeconds: 1
+    type: Rolling
+  template:
+    metadata:
+      labels:
+        app: dbgene
+        deploymentconfig: scenario-service
+    spec:
+      containers:
+        - env:
+          - name: SPRING_DATA_MONGODB_HOST
+            value: mongo
+          - name: SPRING_DATA_MONGODB_PORT
+            value: '27017'
+          - name: SERVICES_PERMISSION_MONGODB_HOST
+            value: mongo
+          - name: SERVICES_PERMISSION_MONGODB_PORT
+            value: '27017'
+          - name: SERVICES_PERMISSION_MONGODB_USERNAME
+            value: permission
+          - name: SERVICES_PERMISSION_MONGODB_PASSWORD
+            value: permission
+          - name: SERVICES_PERMISSION_MONGODB_DATABASE
+            value: permission-db
+          - name: SERVICES_EXECUTION_HOST
+            value: execution-service
+          - name: SERVICES_EXECUTION_PORT
+            value: '8080'
+          - name: SERVICES_WEB_HOST
+            value: web
+          - name: SERVICES_WEB_PORT
+            value: '8080'
+          - name: SERVICES_BACKEND_HOST
+            value: backend-service
+          - name: SERVICES_BACKEND_PORT
+            value: '8080'
+          - name: SERVICES_GATEWAY_HOST
+            value: gateway-service
+          - name: SERVICES_GATEWAY_PORT
+            value: '8080'
+          - name: SERVICES_SCENARIO_HOST
+            value: scenario-service
+          - name: SERVICES_SCENARIO_PORT
+            value: '8080'
+          - name: SERVICES_DATA_HOST
+            value: data-service
+          - name: SERVICES_DATA_PORT
+            value: '8080'
+          - name: WEBSOCKET_ALLOWEDORIGIN
+            value: https://{{ .Release.Namespace }}.{{ .Values.global.host }}
+          - name: KEYCLOAK_AUTH_SERVER_URL
+            value: https://keycloak-{{ .Release.Namespace }}.{{ .Values.global.host }}/auth
+          image: "{{ .Values.global.imageRegistry }}/scenario-service:{{ .Values.global.version }}"
+          imagePullPolicy: Always
+          name: scenario-service
+          resources:
+            limits:
+              memory: {{ .Values.scenarioService.memLimit }}
+            requests:
+              cpu: {{ .Values.scenarioService.cpuRequest }}
+              memory: {{ .Values.scenarioService.memRequest }}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      {{- if .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range .Values.global.imagePullSecrets }}
+        - name: {{ .name }}
+        {{- end }}
+      {{- end }}
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+  test: false
+  triggers:
+    - imageChangeParams:
+        automatic: true
+        containerNames:
+          - scenario-service
+        from:
+          kind: ImageStreamTag
+          name: scenario-service:{{ .Values.global.version }}
+      type: ImageChange
+    - type: ConfigChange
+{{- end }}
+{{- if eq .Values.global.target "kubernetes" }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: dbgene
+  name: scenario-service
+spec:
+  selector:
+    matchLabels:
+       app: dbgene
+       deploymentconfig: scenario-service
+  template:
+    metadata:
+      labels:
+        app: dbgene
+        deploymentconfig: scenario-service
+    spec:
+      containers:
+        - env:
+          - name: JAVA_TOOL_OPTIONS
+            value: {{ .Values.scenarioService.javaToolOptions }}
+          - name: SPRING_DATA_MONGODB_HOST
+            value: mongo
+          - name: SPRING_DATA_MONGODB_PORT
+            value: '27017'
+          - name: SERVICES_EXECUTION_HOST
+            value: execution-service
+          - name: SERVICES_EXECUTION_PORT
+            value: '8080'
+          - name: SERVICES_WEB_HOST
+            value: web
+          - name: SERVICES_WEB_PORT
+            value: '8080'
+          - name: SERVICES_BACKEND_HOST
+            value: backend-service
+          - name: SERVICES_BACKEND_PORT
+            value: '8080'
+          - name: SERVICES_GATEWAY_HOST
+            value: gateway-service
+          - name: SERVICES_GATEWAY_PORT
+            value: '8080'
+          - name: SERVICES_SCENARIO_HOST
+            value: scenario-service
+          - name: SERVICES_SCENARIO_PORT
+            value: '8080'
+          - name: SERVICES_DATA_HOST
+            value: data-service
+          - name: SERVICES_DATA_PORT
+            value: '8080'
+          - name: SERVICES_PERMISSION_MONGODB_HOST
+            value: mongo
+          - name: SERVICES_PERMISSION_MONGODB_PORT
+            value: '27017'
+          - name: SERVICES_PERMISSION_MONGODB_USERNAME
+            value: permission
+          - name: SERVICES_PERMISSION_MONGODB_PASSWORD
+            value: permission
+          - name: SERVICES_PERMISSION_MONGODB_DATABASE
+            value: permission-db
+          - name: WEBSOCKET_ALLOWEDORIGIN
+            value: https://{{ .Release.Namespace }}.{{ .Values.global.host }}
+          - name: KEYCLOAK_AUTH_SERVER_URL
+            value: https://keycloak-{{ .Release.Namespace }}.{{ .Values.global.host }}/auth
+          image: "{{ .Values.global.imageRegistry }}/scenario-service:{{ .Values.global.version }}"
+          imagePullPolicy: Always
+          name: scenario-service
+          resources:
+            limits:
+              memory: {{ .Values.scenarioService.memLimit }}
+            requests:
+              cpu: {{ .Values.scenarioService.cpuRequest }}
+              memory: {{ .Values.scenarioService.memRequest }}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      {{- if .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range .Values.global.imagePullSecrets }}
+        - name: {{ .name }}
+        {{- end }}
+      {{- end }}
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+{{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: dbgene
+  name: scenario-service
+spec:
+  ports:
+    - name: 8080-tcp
+      port: 8080
+      protocol: TCP
+      targetPort: 8080
+  selector:
+    app: dbgene
+    deploymentconfig: scenario-service
+  sessionAffinity: None
+  type: ClusterIP

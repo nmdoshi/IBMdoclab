@@ -1,0 +1,216 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init-scripts
+data:
+  10-create_user.sh: |
+    #!/bin/bash
+    set -e
+
+    echo "Creating database role: keycloak"
+    psql <<-EOSQL
+    CREATE USER keycloak WITH CREATEDB PASSWORD 'keycloak';
+    EOSQL
+
+    echo "Creating database role: data_server"
+    psql <<-EOSQL
+    CREATE USER data_server WITH CREATEDB PASSWORD 'data_server';
+    EOSQL
+  20-create_db.sh: |
+    #!/bin/bash
+    set -e
+
+    echo "Creating database: keycloak"
+    psql <<EOSQL
+    CREATE DATABASE keycloak OWNER keycloak;
+    EOSQL
+
+    echo "Creating database: data_server"
+    psql <<EOSQL
+    CREATE DATABASE data_server OWNER data_server;
+    EOSQL
+  {{- if eq .Values.global.target "openshift" }}
+---
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  labels:
+    app: infra
+  name: postgres
+spec:
+  replicas: 1
+  selector:
+    app: infra
+    name: postgres
+  strategy:
+    activeDeadlineSeconds: 21600
+    recreateParams:
+      timeoutSeconds: 600
+    resources: {}
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: infra
+        name: postgres
+    spec:
+      containers:
+        - env:
+            - name: POSTGRESQL_ADMIN_PASSWORD
+              value: db_admin
+          image: "centos/postgresql-10-centos7:20200324-f4310a3"
+          imagePullPolicy: Always
+          livenessProbe:
+            failureThreshold: 3
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            successThreshold: 1
+            tcpSocket:
+              port: 5432
+            timeoutSeconds: 1
+          name: postgres
+          ports:
+            - containerPort: 5432
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            periodSeconds: 10
+            successThreshold: 1
+            tcpSocket:
+              port: 5432
+            timeoutSeconds: 1
+          resources:
+            limits:
+              memory: {{ .Values.infra.postgres.memLimit }}
+            requests:
+              cpu: {{ .Values.infra.postgres.cpuRequest }}
+              memory: {{ .Values.infra.postgres.memRequest }}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+            - mountPath: /var/lib/pgsql/data
+              name: postgres-data
+            - mountPath: /usr/share/container-scripts/postgresql/start/10-create_user.sh
+              name: init-scripts
+              subPath: 10-create_user.sh
+            - mountPath: /usr/share/container-scripts/postgresql/start/20-create_db.sh
+              name: init-scripts
+              subPath: 20-create_db.sh
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - name: postgres-data
+          {{- if .Values.infra.postgres.volume.enabled }}
+          persistentVolumeClaim:
+            claimName: postgres
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        - configMap:
+            defaultMode: 420
+            name: postgres-init-scripts
+          name: init-scripts
+  test: false
+  triggers:
+    - type: ConfigChange
+  {{- end }}
+  {{- if eq .Values.global.target "kubernetes" }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: infra
+  name: postgres
+spec:
+  selector:
+    matchLabels:
+      app: infra
+      name: postgres
+  template:
+    metadata:
+      labels:
+        app: infra
+        name: postgres
+    spec:
+      containers:
+        - env:
+            - name: POSTGRESQL_ADMIN_PASSWORD
+              value: db_admin
+          image: "centos/postgresql-10-centos7:20200324-f4310a3"
+          imagePullPolicy: Always
+          livenessProbe:
+            failureThreshold: 3
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            successThreshold: 1
+            tcpSocket:
+              port: 5432
+            timeoutSeconds: 1
+          name: postgres
+          ports:
+            - containerPort: 5432
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            periodSeconds: 10
+            successThreshold: 1
+            tcpSocket:
+              port: 5432
+            timeoutSeconds: 1
+          resources:
+            limits:
+              memory: {{ .Values.infra.postgres.memLimit }}
+            requests:
+              cpu: {{ .Values.infra.postgres.cpuRequest }}
+              memory: {{ .Values.infra.postgres.memRequest }}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+            - mountPath: /var/lib/pgsql/data
+              name: postgres-data
+            - mountPath: /usr/share/container-scripts/postgresql/start/10-create_user.sh
+              name: init-scripts
+              subPath: 10-create_user.sh
+            - mountPath: /usr/share/container-scripts/postgresql/start/20-create_db.sh
+              name: init-scripts
+              subPath: 20-create_db.sh
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - name: postgres-data
+          {{- if .Values.infra.postgres.volume.enabled }}
+          persistentVolumeClaim:
+            claimName: postgres
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        - configMap:
+            defaultMode: 420
+            name: postgres-init-scripts
+          name: init-scripts
+  {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: infra
+  name: postgres
+spec:
+  ports:
+    - name: postgres
+      port: 5432
+      protocol: TCP
+      targetPort: 5432
+  selector:
+    app: infra
+    name: postgres
+  sessionAffinity: None
+  type: ClusterIP
