@@ -1,0 +1,13 @@
+apiVersion: v1
+entries:
+  db-gene-demo-capacity-planning:
+  - apiVersion: v1
+    appVersion: 1.0.5
+    created: "2020-07-17T11:47:15.713822-04:00"
+    description: Capacity planning 
+    digest: 715156068f380df570528f52960f7df8fef6559aea440a6c076fa6660ba9828e
+    name: db-gene-demo-capacity-planning
+    urls:
+    - https://github.com/nmdoshi/doclabtest/releases/download/db-gene-demo-capacity-planning-1.0.5/db-gene-demo-capacity-planning-1.0.5.tgz
+    version: 1.0.5
+generated: "2020-07-17T11:47:15.260713-04:00"
