@@ -1,5 +1,5 @@
 global:
-  version: "1.0.4"
+  version: "1.0.5"
   host: dochol-195f866332fa98d1a9ed5bba5a35e11b-0000.us-south.containers.appdomain.cloud
   imagePullSecrets:
     -
