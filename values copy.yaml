@@ -3,6 +3,7 @@ global:
   host: dochol-195f866332fa98d1a9ed5bba5a35e11b-0000.us-south.containers.appdomain.cloud
   imagePullSecrets:
     -
+      dockerconfigjson: ewoJImF1dGhzIjogewoJCSJkYmdlbmUtZGVtb3MtcmVnaXN0cnkuZGVjaXNpb25icmFpbi5jbG91ZCI6IHsKCQkJImF1dGgiOiAiWkdKblpXNWxMV1JsYlc5ek9tbGxVMmhoTVZCdiIKCQl9Cgl9LAoJIkh0dHBIZWFkZXJzIjogewoJCSJVc2VyLUFnZW50IjogIkRvY2tlci1DbGllbnQvMTkuMDMuNiAobGludXgpIgoJfQp9Cg==
       name: dbgene-demos-registry.decisionbrain.cloud
   imageRegistry: us.icr.io/dte-registry
   target: openshift
